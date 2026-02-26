@@ -1,27 +1,53 @@
-from pwdlib import PasswordHash
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
+import jwt
+from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from pwdlib.hashers.bcrypt import BcryptHasher
-import jwt
-from datetime import datetime, timedelta, timezone
+
 from app.config import SECRET_KEY, ALGORITHM
 
 
-password_hash = PasswordHash(
+password_hasher = PasswordHash(
     (
         Argon2Hasher(),
         BcryptHasher(),
     )
 )
 
-def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {'exp': expire, 'sub': str(subject)}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm = ALGORITHM)
-    return encoded_jwt
 
 def hash_password(password: str) -> str:
-    return password_hash.hash(password)
+    return password_hasher.hash(password)
 
-def verify_password(plain_password: str, hashed_password: str) -> tuple[bool, str | None]:
-    return password_hash.verify_and_update(plain_password, hashed_password)
+
+def verify_password(
+    plain_password: str,
+    hashed_password: str,
+) -> bool:
+    valid, _ = password_hasher.verify_and_update(
+        plain_password,
+        hashed_password,
+    )
+    return valid
+
+
+def create_access_token(
+    subject: str | Any,
+    expires_delta: timedelta,
+) -> str:
+
+    expire = datetime.now(timezone.utc) + expires_delta
+
+    payload = {
+        "sub": str(subject),
+        "exp": expire,
+    }
+
+    token = jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+    return token

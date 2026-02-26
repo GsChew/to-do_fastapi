@@ -1,67 +1,100 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.authh.dependencies import get_current_user
 from app.database import SessionDep
+from app.models import User
 from app.repository.tasks import TaskRepository
 from app.schemas import STask, STaskAdd, STaskUpdate
 
 
-router = APIRouter(prefix="/tasks", tags=["for tasks"])
+router = APIRouter(
+    prefix="/tasks",
+    tags=["Tasks"],
+)
+
+
+@router.get("", response_model=list[STask])
+async def get_tasks(
+    session: SessionDep,
+    user: User = Depends(get_current_user),
+):
+
+    return await TaskRepository.get_tasks(
+        user.id,
+        session,
+    )
 
 
 @router.get("/{task_id}", response_model=STask)
-async def get_task(task_id: int, session: SessionDep):
+async def get_task(
+    task_id: int,
+    session: SessionDep,
+    user: User = Depends(get_current_user),
+):
 
-    task = await TaskRepository.get_task(task_id, session)
+    task = await TaskRepository.get_task(
+        task_id,
+        user.id,
+        session,
+    )
 
     if not task:
-        raise HTTPException(status_code=404, detail="Задача не найдена")
+        raise HTTPException(404, "Not found")
 
     return task
 
 
-@router.get("", response_model=list[STask])
-async def get_tasks(session: SessionDep):
-
-    return await TaskRepository.get_tasks(session)
-
-
-@router.post("", response_model=STask, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=STask,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_task(
-    task: STaskAdd,
-    user_id: int,
+    data: STaskAdd,
     session: SessionDep,
+    user: User = Depends(get_current_user),
 ):
 
-    new_task = await TaskRepository.add_task(task, user_id, session)
-
-    return new_task
+    return await TaskRepository.create_task(
+        data,
+        user.id,
+        session,
+    )
 
 
 @router.put("/{task_id}", response_model=STask)
 async def update_task(
     task_id: int,
-    task_data: STaskUpdate,
+    data: STaskUpdate,
     session: SessionDep,
+    user: User = Depends(get_current_user),
 ):
 
-    updated_task = await TaskRepository.update_task(
+    task = await TaskRepository.update_task(
         task_id,
-        task_data,
+        user.id,
+        data,
         session,
     )
 
-    if not updated_task:
-        raise HTTPException(status_code=404, detail="Задача не найдена")
+    if not task:
+        raise HTTPException(404, "Not found")
 
-    return updated_task
+    return task
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_task(task_id: int, session: SessionDep):
+@router.delete("/{task_id}", status_code=204)
+async def delete_task(
+    task_id: int,
+    session: SessionDep,
+    user: User = Depends(get_current_user),
+):
 
-    deleted_task = await TaskRepository.delete_task(task_id, session)
+    task = await TaskRepository.delete_task(
+        task_id,
+        user.id,
+        session,
+    )
 
-    if not deleted_task:
-        raise HTTPException(status_code=404, detail="Задача не найдена")
-
-    return None
+    if not task:
+        raise HTTPException(404, "Not found")

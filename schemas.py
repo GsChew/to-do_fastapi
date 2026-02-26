@@ -1,8 +1,8 @@
-from typing import Optional
 from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict
 
+
+# -------- USERS --------
 
 class SUserCreate(BaseModel):
     email: str
@@ -17,9 +17,7 @@ class SUser(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class SUserInDB(SUser):
-    hashed_password: str
-
+# -------- TASKS --------
 
 class STaskAdd(BaseModel):
     title: str

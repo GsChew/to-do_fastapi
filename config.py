@@ -1,5 +1,5 @@
-import secrets
+import os
 
-SECRET_KEY = secrets.token_hex(32)
+SECRET_KEY = os.getenv("SECRET_KEY", "SUPER_SECRET_KEY_CHANGE_ME")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

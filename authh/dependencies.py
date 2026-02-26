@@ -1,16 +1,15 @@
 from typing import Annotated
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-import jwt
-from jwt import PyJWTError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import SECRET_KEY, ALGORITHM
 from app.database import SessionDep
 from app.models import User
 
 
-# Схема получения токена из Authorization: Bearer ...
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
@@ -26,7 +25,6 @@ async def get_current_user(
     )
 
     try:
-        # Декодируем JWT
         payload = jwt.decode(
             token,
             SECRET_KEY,
@@ -38,14 +36,14 @@ async def get_current_user(
         if user_id is None:
             raise credentials_exception
 
-    except PyJWTError:
+        user_id = int(user_id)
+
+    except Exception:
         raise credentials_exception
 
+    user = await session.get(User, user_id)
 
-    # Ищем пользователя в БД
-    user = await session.get(User, int(user_id))
-
-    if user is None:
+    if not user:
         raise credentials_exception
 
     return user
